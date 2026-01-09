@@ -1,0 +1,52 @@
+#Points of sphere: 
+
+[X, Y, Z] = sphere
+
+#Plot sphere:
+
+sphere
+axis equal
+
+# Plot Brazil map:
+
+[X, Y, Z] = sphere(40);
+mesh(X, Y, Z)
+hold on
+
+
+B = load("border_main.txt");
+
+lon = B(:,1)*(pi/180);  
+lat = B(:,2)*(pi/180);   
+
+Xmap = cos(lat) .* cos(lon);
+Ymap = cos(lat) .* sin(lon);
+Zmap = sin(lat);
+
+hold on
+plot3(Xmap, Ymap, Zmap, '-')
+
+#Loxodromia on Mercator Plane:
+
+lat_RJ = 22*(pi/180); 
+lon_RJ = 43*(pi/180); 
+
+lat_BRIS = 27*(pi/180); 
+lon_BRIS = 153*(pi/180);
+
+y_BRIS = log(tan(lat_RJ/2 + pi/4))
+y_RJ = log(tan(lat_BRIS/2 + pi/4))
+
+m = (y_BRIS - y_RJ)/(lon_RJ - lon_BRIS)
+
+x = linspace(lon_RJ, lon_BRIS, 100);
+
+y = m*(x - lon_RJ) + log(tan(lat_RJ/2 + pi/4)) 
+
+plot(x, y, 'b', 'LineWidth', 2)
+grid on
+xlabel('Longitude (rad)')
+ylabel('Mercator y')
+title('Reta entre RJ e Brisbane (projeção de Mercator)')
+
+#Loxodromia on Earth:
