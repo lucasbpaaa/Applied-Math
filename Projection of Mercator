@@ -23,9 +23,7 @@ Xmap = cos(lat) .* cos(lon);
 Ymap = cos(lat) .* sin(lon);
 Zmap = sin(lat);
 
-hold on
 plot3(Xmap, Ymap, Zmap, '-')
-hold on
 
 #Loxodromia on Mercator Plane:
 
