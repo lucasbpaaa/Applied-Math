@@ -18,5 +18,33 @@ PI = 4*l/n
 E_N = abs(pi - PI)
 
 
-#Brazil area:
+#Generating random points on sphere:
 
+pkg load statistics
+
+N = 1000;
+rdm_matrix = mvnrnd([0, 0, 0], eye(3), N); # mvnrnd(average, identity, number of random points)
+
+X = zeros(N, 1);
+Y = zeros(N, 1);
+Z = zeros(N, 1);
+
+for j = 1:N #projection on sphere
+  x = rdm_matrix(j, 1);
+  y = rdm_matrix(j, 2);
+  z = rdm_matrix(j, 3);
+  n = sqrt(x^2 + y^2 + z^2);
+  X(j) = x/n;
+  Y(j) = y/n;
+  Z(j) = z/n;
+end 
+
+P = [X, Y, Z];
+
+phi = asin(Z);
+lambda = angle(X + 1i*Y);
+
+Q = [phi, lambda];
+
+plot3(X,Y,Z,'.')
+axis equal
