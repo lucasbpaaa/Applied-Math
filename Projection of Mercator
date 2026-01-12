@@ -62,3 +62,27 @@ Z = sin(phi);
 plot3(X,Y,Z,'r','LineWidth',2)
 
 
+#Geodesic:
+
+x_RJ = cos(lat_RJ) .* cos(lon_RJ);
+y_RJ = cos(lat_RJ) .* sin(lon_RJ);
+z_RJ = sin(lat_RJ);
+
+x_BRIS = cos(lat_BRIS) .* cos(lon_BRIS);
+y_BRIS = cos(lat_BRIS) .* sin(lon_BRIS);
+z_BRIS = sin(lat_BRIS);
+
+p = [x_RJ; y_RJ; z_RJ];
+q = [x_BRIS; y_BRIS; z_BRIS];
+
+m = 1000;
+theta = acos(dot(p,q));
+t = linspace(0, 1, m);
+Gamma = zeros(3, m);
+
+
+for k= 1:m
+  Gamma(:,k) = ( sin((1-t(k))*theta)*p + sin(t(k)*theta)*q ) / sin(theta);
+end
+
+plot3(Gamma(1,:), Gamma(2,:), Gamma(3,:), 'b', 'LineWidth', 2)
