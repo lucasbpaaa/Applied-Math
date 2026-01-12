@@ -25,28 +25,42 @@ Zmap = sin(lat);
 
 hold on
 plot3(Xmap, Ymap, Zmap, '-')
+hold on
 
 #Loxodromia on Mercator Plane:
 
-lat_RJ = 22*(pi/180); 
-lon_RJ = 43*(pi/180); 
+lat_RJ = -22.9035*(pi/180); 
+lon_RJ = -43.2096*(pi/180); 
 
-lat_BRIS = 27*(pi/180); 
-lon_BRIS = 153*(pi/180);
+lat_BRIS = -27.47*(pi/180); 
+lon_BRIS = 153.03*(pi/180);
 
-y_BRIS = log(tan(lat_RJ/2 + pi/4))
-y_RJ = log(tan(lat_BRIS/2 + pi/4))
+x_BRISm = lon_BRIS;
+x_RJm =  lon_RJ;
 
-m = (y_BRIS - y_RJ)/(lon_RJ - lon_BRIS)
+y_BRISm = log(tan(lat_BRIS/2 + pi/4));
+y_RJm = log(tan(lat_RJ/2 + pi/4));
 
-x = linspace(lon_RJ, lon_BRIS, 100);
+m = (y_BRISm - y_RJm)/(x_BRISm - x_RJm)
 
-y = m*(x - lon_RJ) + log(tan(lat_RJ/2 + pi/4)) 
+x = linspace(x_RJm, x_BRISm, 1000);
+y = m*(x - x_RJm) + y_RJm;
 
-plot(x, y, 'b', 'LineWidth', 2)
-grid on
-xlabel('Longitude (rad)')
-ylabel('Mercator y')
-title('Reta entre RJ e Brisbane (projeção de Mercator)')
+P = [x(:) , y(:)];
+
 
 #Loxodromia on Earth:
+
+phi = 2*atan(exp(y)) - pi/2;  
+lambda = x;     
+
+
+A = [ lambda(:) , phi(:) ];
+             
+X = cos(phi) .* cos(lambda);
+Y = cos(phi) .* sin(lambda);
+Z = sin(phi);
+
+plot3(X,Y,Z,'r','LineWidth',2)
+
+
