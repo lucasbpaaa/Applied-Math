@@ -44,7 +44,8 @@ m = (y_BRISm - y_RJm)/(x_BRISm - x_RJm)
 x = linspace(x_RJm, x_BRISm, 1000);
 y = m*(x - x_RJm) + y_RJm;
 
-P = [x(:) , y(:)];
+plot(x,y,'r','LineWidth',2)
+
 
 
 #Loxodromia on Earth:
@@ -62,7 +63,7 @@ Z = sin(phi);
 plot3(X,Y,Z,'r','LineWidth',2)
 
 
-#Geodesic:
+#Geodesic on sphere:
 
 x_RJ = cos(lat_RJ) .* cos(lon_RJ);
 y_RJ = cos(lat_RJ) .* sin(lon_RJ);
@@ -86,3 +87,22 @@ for k= 1:m
 end
 
 plot3(Gamma(1,:), Gamma(2,:), Gamma(3,:), 'b', 'LineWidth', 2)
+
+#Geodesic on Mercartor:
+
+ph = asin(Gamma(3,:));
+lamb = angle(Gamma(1,:) + 1i*Gamma(2,:));
+
+# --- Near poles, lambda and phi are non well defined  ---
+lamb = unwrap(lamb);                 # remove jump in interval -pi/pi
+
+eps = 1e-6;                          
+ph = max(min(ph, pi/2 - eps), -pi/2 + eps); #remove singularity near pole
+# --------------------------------
+
+ph_m = log( tan(pi/4 + ph/2) );
+lamb_m = lamb;
+
+M = [ph_m(:), lamb_m(:)];
+plot(ph_m,lamb_m,'r','LineWidth',2)
+
