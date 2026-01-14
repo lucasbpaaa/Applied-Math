@@ -25,13 +25,8 @@ Zmap = sin(lat);
 
 plot3(Xmap, Ymap, Zmap, '-')
 
+
 #Loxodromia on Mercator Plane:
-
-lat_RJ = -22.9035*(pi/180); 
-lon_RJ = -43.2096*(pi/180); 
-
-lat_BRIS = -27.47*(pi/180); 
-lon_BRIS = 153.03*(pi/180);
 
 x_BRISm = lon_BRIS;
 x_RJm =  lon_RJ;
@@ -44,7 +39,7 @@ m = (y_BRISm - y_RJm)/(x_BRISm - x_RJm)
 x = linspace(x_RJm, x_BRISm, 1000);
 y = m*(x - x_RJm) + y_RJm;
 
-plot(x,y,'r','LineWidth',2)
+#plot(x,y,'r','LineWidth',2)
 
 
 
@@ -94,7 +89,7 @@ ph = asin(Gamma(3,:));
 lamb = angle(Gamma(1,:) + 1i*Gamma(2,:));
 
 # --- Near poles, lambda and phi are non well defined  ---
-lamb = unwrap(lamb);                 # remove jump in interval -pi/pi
+lamb = unwrap(lamb);                 # remove jumps in interval -pi/pi
 
 eps = 1e-6;                          
 ph = max(min(ph, pi/2 - eps), -pi/2 + eps); #remove singularity near pole
@@ -104,5 +99,31 @@ ph_m = log( tan(pi/4 + ph/2) );
 lamb_m = lamb;
 
 M = [ph_m(:), lamb_m(:)];
-plot(ph_m,lamb_m,'r','LineWidth',2)
+#plot(ph_m,lamb_m,'r','LineWidth',2)
 
+
+# --- The way below doesn't work. A parametrization phi = phi(lambda)
+... does not necessarily fall within the sphere ---
+
+#Geodesic using non-parametric equation:
+
+v = 1000;
+normal = cross(p, q);
+Lambda = linspace(lon_RJ, lon_BRIS, v);
+Phi = zeros(1,v);
+
+for l=1:v
+    Phi(l) = atan2(-normal(1)*cos(Lambda(l)) - normal(2)*sin(Lambda(l)), normal(3));
+  end
+ 
+ 
+# --- Near poles, lambda and phi are non well defined  ---
+          
+eps = 1e-6;                          
+Phi = max(min(Phi, pi/2 - eps), -pi/2 + eps); #remove singularity near pole
+# --------------------------------
+
+#plot(Lambda,Phi,'k','LineWidth',2)
+
+
+# --- Here we lost (Aqui Perdemo) ---
