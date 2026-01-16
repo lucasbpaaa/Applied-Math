@@ -25,6 +25,12 @@ Zmap = sin(lat);
 
 plot3(Xmap, Ymap, Zmap, '-')
 
+#Plot Brazil map on Mercator:
+
+Xbr_m = lon
+Ybr_m = log(tan(lat/2 + pi/4))
+
+#plot(Xbr_m,Ybr_m,'r','LineWidth',2)
 
 #Loxodromia on Mercator Plane:
 
