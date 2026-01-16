@@ -1,18 +1,8 @@
-#Points of sphere: 
-
-[X, Y, Z] = sphere
-
-#Plot sphere:
-
-sphere
-axis equal
-
 # Plot Brazil map:
 
-[X, Y, Z] = sphere(40);
+[X, Y, Z] = sphere(40); #sphere
 mesh(X, Y, Z)
 hold on
-
 
 B = load("border_main.txt");
 
@@ -23,7 +13,7 @@ Xmap = cos(lat) .* cos(lon);
 Ymap = cos(lat) .* sin(lon);
 Zmap = sin(lat);
 
-plot3(Xmap, Ymap, Zmap, '-')
+plot3(Xmap, Ymap, Zmap, '-') 
 
 #Plot Brazil map on Mercator:
 
@@ -33,6 +23,13 @@ Ybr_m = log(tan(lat/2 + pi/4))
 #plot(Xbr_m,Ybr_m,'r','LineWidth',2)
 
 #Loxodromia on Mercator Plane:
+
+
+lat_RJ = -22.9035*(pi/180); 
+lon_RJ = -43.2096*(pi/180); 
+
+lat_BRIS = -27.47*(pi/180); 
+lon_BRIS = 153.03*(pi/180);
 
 x_BRISm = lon_BRIS;
 x_RJm =  lon_RJ;
@@ -48,8 +45,7 @@ y = m*(x - x_RJm) + y_RJm;
 #plot(x,y,'r','LineWidth',2)
 
 
-
-#Loxodromia on Earth:
+#Loxodromia on sphere:
 
 phi = 2*atan(exp(y)) - pi/2;  
 lambda = x;     
@@ -87,9 +83,14 @@ for k= 1:m
   Gamma(:,k) = ( sin((1-t(k))*theta)*p + sin(t(k)*theta)*q ) / sin(theta);
 end
 
-plot3(Gamma(1,:), Gamma(2,:), Gamma(3,:), 'b', 'LineWidth', 2)
+#plot3(Gamma(1,:), Gamma(2,:), Gamma(3,:), 'b', 'LineWidth', 2)
 
-#Geodesic on Mercartor:
+#Geodesic on Mercar#Plot Brazil map on Mercator:
+
+Xbr_m = lon
+Ybr_m = log(tan(lat/2 + pi/4))
+
+#plot(Xbr_m,Ybr_m,'r','LineWidth',2)tor:
 
 ph = asin(Gamma(3,:));
 lamb = angle(Gamma(1,:) + 1i*Gamma(2,:));
@@ -108,28 +109,30 @@ M = [ph_m(:), lamb_m(:)];
 #plot(ph_m,lamb_m,'r','LineWidth',2)
 
 
-# --- The way below doesn't work. A parametrization phi = phi(lambda)
-... does not necessarily fall within the sphere ---
 
 #Geodesic using non-parametric equation:
 
 v = 1000;
 normal = cross(p, q);
-Lambda = linspace(lon_RJ, lon_BRIS, v);
 Phi = zeros(1,v);
 
-for l=1:v
-    Phi(l) = atan2(-normal(1)*cos(Lambda(l)) - normal(2)*sin(Lambda(l)), normal(3));
-  end
- 
- 
-# --- Near poles, lambda and phi are non well defined  ---
-          
-eps = 1e-6;                          
-Phi = max(min(Phi, pi/2 - eps), -pi/2 + eps); #remove singularity near pole
-# --------------------------------
+Lambda = linspace(lon_RJ, lon_BRIS - 2*pi, v);
 
-#plot(Lambda,Phi,'k','LineWidth',2)
+Phi = atan((-normal(1).*cos(Lambda) - normal(2).*sin(Lambda))/normal(3));
+
+x_g = cos(Phi) .* cos(Lambda);
+y_g = cos(Phi) .* sin(Lambda);
+z_g = sin(Phi);
+
+plot3(x_g, y_g, z_g,'k','LineWidth',2)
 
 
-# --- Here we lost (Aqui Perdemo) ---
+#Trapezoidal method and Brazil lenght:
+
+H = [Xmap(:), Ymap(:), Zmap(:)];
+H(end+1,:) = H(1,:);
+dot_prod = sum(H(1:end-1,:) .* H(2:end,:), 2);
+dot_prod = min(1, max(-1, dot_prod)); #Numerical safety
+R = 6371;
+
+S_br = sum(R*acos(dot_prod));
