@@ -32,7 +32,56 @@ fprintf('Estimated slope = %.4f\n', slope);
 
 #Solver PIP:
 
+function inside = is_in_polygon(tx, ty, filename)
+    
+    % Load data using the variable 'filename'
+    data = load(filename);
+    
+    px = data(:, 1);
+    py = data(:, 2);
+    
+    % Duplicate start point at the end of the matrix to close the polygon
+    px = [px; px(1)];
+    py = [py; py(1)];
+    
+    n = length(px);
+    inside = false;
+    
+    for i = 1:(n-1)
+        x1 = px(i);   y1 = py(i);    
+        x2 = px(i+1); y2 = py(i+1);   
+        
+        % Check if the point 'ty' is vertically within the edge's Y-range
+        if ((y1 > ty) ~= (y2 > ty))
+            x_int = x1 + (ty - y1) * (x2 - x1) / (y2 - y1);
+            
+            if (tx < x_int)
+                inside = ~inside;
+            end
+        end
+    end
+end
 
+# ------ Test to function is_in_polygon: -----
+
+#Test Script for is_in_polygon:
+
+filename = 'Test_of_is_in_polygon.txt';
+
+
+tx = input('Enter test X coordinate: ');
+ty = input('Enter test Y coordinate: ');
+
+
+result = is_in_polygon(tx, ty, filename);
+
+if result
+    fprintf('\n[RESULT] The point (%.2f, %.2f) is INSIDE.\n', tx, ty);
+else
+    fprintf('\n[RESULT] The point (%.2f, %.2f) is OUTSIDE.\n', tx, ty);
+end
+
+#-------- The test ends here -------
 
 
 
