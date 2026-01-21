@@ -85,30 +85,49 @@ end
 
 
 
-#Generating random points on sphere:
+
+# ----- Here, we have a draft of the code to calculate Brazil area using random points in sphere and the PIP function -------
 
 pkg load statistics
 
-N = 1000;
-rdm_matrix = mvnrnd([0, 0, 0], eye(3), N); # mvnrnd(average, identity, number of random points)
+N = 10000;                     
+R = 6371;                      
+filename = 'border_main.txt'; 
 
-X = zeros(N, 1);
-Y = zeros(N, 1);
-Z = zeros(N, 1);
+#Generating random points on sphere:
+rdm_matrix = mvnrnd([0, 0, 0], eye(3), N);
+count_inside = 0;
 
-for j = 1:N #projection on sphere
-  u = rdm_matrix(j, 1);
-  v = rdm_matrix(j, 2);
-  w = rdm_matrix(j, 3);
-  n = sqrt(x^2 + y^2 + z^2);
-  X(j) = u/n;
-  Y(j) = v/n;
-  Z(j) = w/n;
-end 
+for j = 1:N
+   
+    u = rdm_matrix(j, 1);
+    v = rdm_matrix(j, 2);
+    w = rdm_matrix(j, 3);
+    n_val = sqrt(u^2 + v^2 + w^2);
+    
+    qx = u/n_val;
+    qy = v/n_val;
+    qz = w/n_val;
+    
+ 
+    lat = asin(qz);
+    lon = angle(qx + 1i*qy);
+    
+    # PIP Solver Check
+    
+    if is_in_polygon(lon, lat, filename)
+        count_inside = count_inside + 1;
+    end
+end
 
-#plot3(X,Y,Z,'.')
-axis equal
+# 5. Area Calculation
+
+total_sphere_area = 4 * pi * R^2;
+brazil_area_est = (count_inside / N) * total_sphere_area;
+
+fprintf('Points analyzed: %d\n', N);
+fprintf('Points found inside Brazil border: %d\n', count_inside);
+fprintf('Estimated Area of Brazil: %.2f km^2\n', brazil_area_est);
 
 
-phi = asin(Z);
-lambda = angle(X + 1i*Y);
+# ----- I need adjust PIP to take a loxodromia ( or geodesic ) between two points of the Brazil map and to check which random points is inside to Brazil ----
