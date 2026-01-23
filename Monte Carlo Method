@@ -93,14 +93,19 @@ pkg load statistics
 
 N = 10000;                     
 R = 6371;                      
-filename = 'border_main.txt'; 
+filename = 'border_main.txt';
 
-#Generating random points on sphere:
+# Brazil's Longitude Bounds (in degrees)
+lon_min = -74; 
+lon_max = -35;
+delta_lon_rad = (lon_max - lon_min) * (pi/180);
+
+# Generating random points on sphere using the Gaussian method
 rdm_matrix = mvnrnd([0, 0, 0], eye(3), N);
 count_inside = 0;
 
 for j = 1:N
-   
+    #Normalize the 3D vector to sit on the sphere surface
     u = rdm_matrix(j, 1);
     v = rdm_matrix(j, 2);
     w = rdm_matrix(j, 3);
@@ -110,27 +115,24 @@ for j = 1:N
     qy = v/n_val;
     qz = w/n_val;
     
- 
-    lat = asin(qz);
-    lon = angle(qx + 1i*qy);
+    lat_deg = asin(qz) * (180/pi);
+    lon_deg = angle(qx + 1i*qy) * (180/pi);
     
-    # PIP Solver Check
-    
-    if is_in_polygon(lon, lat, filename)
-        count_inside = count_inside + 1;
+    #Check points that fall inside the "Fuse"
+    if (lon_deg >= lon_min && lon_deg <= lon_max)
+        # PIP Solver Check:
+        if is_in_polygon(lon_deg, lat_deg, filename)
+            count_inside = count_inside + 1;
+        end
     end
 end
 
-# 5. Area Calculation
+                      #Area Calculation
 
-total_sphere_area = 4 * pi * R^2;
-brazil_area_est = (count_inside / N) * total_sphere_area;
+area_fuse = 2 * (R^2) * delta_lon_rad;
+area_brazil = (count_inside / N) * (4 * pi * R^2);
 
-fprintf('Points analyzed: %d\n', N);
-fprintf('Points found inside Brazil border: %d\n', count_inside);
-fprintf('Estimated Area of Brazil: %.2f km^2\n', brazil_area_est);
-
-
-# ----- I need adjust PIP to take a loxodromia ( or geodesic ) between ...
-... two points of the Brazil map and to check which random points is inside...
-... to Brazil ----
+fprintf('\n--- Calculation Complete ---\n');
+fprintf('Points Inside Brazil: %d\n', count_inside);
+fprintf('Total Samples: %d\n', N);
+fprintf('Estimated Area: %.2f km²\n', area_brazil);
