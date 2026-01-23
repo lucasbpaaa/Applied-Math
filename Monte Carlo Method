@@ -1,4 +1,5 @@
-#Accuracy depending on the number of points sampled using Monte Carlo Method (value of pi).
+#Accuracy depending on the number of points sampled using...
+... Monte Carlo Method (value of pi).
 
 n = round(logspace(2, 6, 100));
 E_N = zeros(1, length(n));
@@ -62,7 +63,6 @@ function inside = is_in_polygon(tx, ty, filename)
     end
 end
 
-# ------ Test to function is_in_polygon: -----
 
 #Test Script for is_in_polygon:
 
@@ -86,7 +86,8 @@ end
 
 
 
-# ----- Here, we have a draft of the code to calculate Brazil area using random points in sphere and the PIP function -------
+# ----- Here, we have a draft of the code to calculate Brazil area using...
+...random points in sphere and the PIP function -------
 
 pkg load statistics
 
@@ -130,4 +131,6 @@ fprintf('Points found inside Brazil border: %d\n', count_inside);
 fprintf('Estimated Area of Brazil: %.2f km^2\n', brazil_area_est);
 
 
-# ----- I need adjust PIP to take a loxodromia ( or geodesic ) between two points of the Brazil map and to check which random points is inside to Brazil ----
+# ----- I need adjust PIP to take a loxodromia ( or geodesic ) between ...
+... two points of the Brazil map and to check which random points is inside...
+... to Brazil ----
