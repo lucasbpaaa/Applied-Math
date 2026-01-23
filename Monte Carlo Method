@@ -1,3 +1,5 @@
+#Student: Lucas Barbosa
+
             #Accuracy depending on the number of points sampled using...
                 ... Monte Carlo Method (value of pi).
 
@@ -56,27 +58,31 @@ end
 #                                    Brazil area:
 
 
-N = 10000;                     
+N = 100;                     
 R = 6371;                      
 filename = 'border_main.txt';
 
-# Longitude bounds
+# Longitude and longitude bounds
+
 lon_min_rad = -74 * pi/180;
 lon_max_rad = -35 * pi/180;
 
+lat_min_rad = -34 * pi/180;
+lat_max_rad =   6  * pi/180;
 
 # --- Uniform sampling on the spherical lune ---
 
 lon_rad = lon_min_rad + (lon_max_rad - lon_min_rad) .* rand(N,1);
 
-sin_lat = 2 .* rand(N,1) - 1;
+sin_lat = sin(lat_min_rad) + ...
+          (sin(lat_max_rad) - sin(lat_min_rad)) .* rand(N,1);
 lat_rad = asin(sin_lat);
 
-# Convert to degrees
+# Convert to degrees (PIP works in degrees)
 lon_deg = lon_rad * 180/pi;
 lat_deg = lat_rad * 180/pi;
 
-# --- PIP test  ---
+# --- PIP test ---
 
 count_inside = 0;
 for i = 1:N
@@ -85,13 +91,14 @@ for i = 1:N
     end
 end
 
-                # --- Area calculation ---
+# --- Area calculation ---
 
-delta_lon = lon_max - lon_min;
+delta_lon = lon_max_rad - lon_min_rad;
 
-area_lune = 2 * R^2 * delta_lon; 
+area_rectangle = R^2 * delta_lon * ...
+                 (sin(lat_max_rad) - sin(lat_min_rad));
 
-area_brazil = (count_inside / N) * area_lune;
+area_brazil = (count_inside / N) * area_rectangle;
 
 fprintf('\n--- Calculation Complete ---\n');
 fprintf('Points Inside Brazil: %d\n', count_inside);
@@ -99,9 +106,9 @@ fprintf('Total Samples: %d\n', N);
 fprintf('Estimated Area: %.2f km²\n', area_brazil);
 
 
+#Student: Lucas Barbosa
 
-
-#                                               Solver PIP:
+#                                   Solver PIP:
 
 function inside = is_in_polygon(tx, ty, filename)
 
