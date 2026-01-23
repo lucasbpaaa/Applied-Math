@@ -34,39 +34,47 @@ fprintf('Estimated slope = %.4f\n', slope);
 #Solver PIP:
 
 function inside = is_in_polygon(tx, ty, filename)
-    
-    % Load data using the variable 'filename'
+
     data = load(filename);
-    
-    px = data(:, 1);
-    py = data(:, 2);
-    
-    % Duplicate start point at the end of the matrix to close the polygon
+    px = data(:,1);
+    py = data(:,2);
+
+    # Close polygon with start and end points
     px = [px; px(1)];
     py = [py; py(1)];
-    
-    n = length(px);
-    inside = false;
-    
-    for i = 1:(n-1)
-        x1 = px(i);   y1 = py(i);    
-        x2 = px(i+1); y2 = py(i+1);   
-        
-        % Check if the point 'ty' is vertically within the edge's Y-range
-        if ((y1 > ty) ~= (y2 > ty))
-            x_int = x1 + (ty - y1) * (x2 - x1) / (y2 - y1);
-            
-            if (tx < x_int)
-                inside = ~inside;
-            end
-        end
+
+    x1 = px(1:end-1);
+    y1 = py(1:end-1);
+    x2 = px(2:end);
+    y2 = py(2:end);
+
+    # Ensure column vectors
+    tx = tx(:);
+    ty = ty(:);
+
+    # Initialize result vector
+    inside = false(size(tx));
+
+    # For each polygon edge (still vectorized over points)
+    for i = 1:length(x1)
+
+        # Check if ray crosses the edge
+        crosses = (y1(i) > ty) ~= (y2(i) > ty);
+
+        # X intersection of the ray with the edge
+        x_int = x1(i) + (ty - y1(i)) .* (x2(i) - x1(i)) ./ (y2(i) - y1(i));
+
+        # Toggle inside status where intersection is valid
+        mask = crosses & (tx < x_int);
+        inside(mask) = ~inside(mask);
     end
 end
 
 
+
 #Test Script for is_in_polygon:
 
-filename = 'Test_of_is_in_polygon.txt';
+filename = 'Test_of_is_in_polygon.txt'; 
 
 
 tx = input('Enter test X coordinate: ');
@@ -84,53 +92,37 @@ end
 #-------- The test ends here -------
 
 
-
-
-# ----- Here, we have a draft of the code to calculate Brazil area using...
-...random points in sphere and the PIP function -------
-
-pkg load statistics
-
-N = 100;                     
+N = 10000;                     
 R = 6371;                      
 filename = 'border_main.txt';
 
-# Brazil's Longitude Bounds (in degrees)
-lon_min = -74; 
-lon_max = -35;
-delta_lon_rad = (lon_max - lon_min) * (pi/180);
+# Longitude bounds (degrees)
+lon_min = -74* pi/180;
+lon_max = -35* pi/180;
 
-# Generating random points on sphere using the Gaussian method
-rdm_matrix = mvnrnd([0, 0, 0], eye(3), N);
-count_inside = 0;
+# --- Uniform sampling on the spherical lune ---
 
-for j = 1:N
-    #Normalize the 3D vector to sit on the sphere surface
-    u = rdm_matrix(j, 1);
-    v = rdm_matrix(j, 2);
-    w = rdm_matrix(j, 3);
-    n_val = sqrt(u^2 + v^2 + w^2);
-    
-    qx = u/n_val;
-    qy = v/n_val;
-    qz = w/n_val;
-    
-    lat_deg = asin(qz) * (180/pi);
-    lon_deg = angle(qx + 1i*qy) * (180/pi);
-    
-    #Check points that fall inside the "Fuse"
-    if (lon_deg >= lon_min && lon_deg <= lon_max)
-        # PIP Solver Check:
-        if is_in_polygon(lon_deg, lat_deg, filename)
-            count_inside = count_inside + 1;
-        end
-    end
-end
+lon_rad = lon_min_rad + (lon_max_rad - lon_min_rad) .* rand(N,1);
 
-                      #Area Calculation
+sin_lat = 2 .* rand(N,1) - 1;
+lat_rad = asin(sin_lat);
 
-area_fuse = 2 * (R^2) * delta_lon_rad;
-area_brazil = (count_inside / N) * (4 * pi * R^2);
+# Convert to degrees
+lon_deg = lon_rad * 180/pi;
+lat_deg = lat_rad * 180/pi;
+
+# --- Point-in-polygon test  ---
+inside = is_in_polygon(lon_deg, lat_deg, filename);
+
+count_inside = sum(inside);
+
+                # --- Area calculation ---
+
+delta_lon_rad = lon_max_rad - lon_min_rad;
+
+area_lune = 2 * R^2 * delta_lon_rad; #spherical lune
+
+area_brazil = (count_inside / N) * area_lune;
 
 fprintf('\n--- Calculation Complete ---\n');
 fprintf('Points Inside Brazil: %d\n', count_inside);
