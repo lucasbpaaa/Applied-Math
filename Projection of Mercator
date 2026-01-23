@@ -91,20 +91,22 @@ end
 ph = asin(Gamma(3,:));
 lamb = angle(Gamma(1,:) + 1i*Gamma(2,:));
 
-# --- Near poles, lambda and phi are non well defined  ---
-lamb = unwrap(lamb);                 # remove jumps in interval -pi/pi
-
-eps = 1e-6;                          
-ph = max(min(ph, pi/2 - eps), -pi/2 + eps); #remove singularity near pole
-# --------------------------------
-
 ph_m = log(tan(pi/4 + ph/2));
-lamb_m = lamb;
 
-plot(lamb_m,ph_m,'r','LineWidth',2);
+# ----- When longitude near pi, we have a descontinuity. Observe that lamb \in...
+... (-pi, pi), so the parameter jumps to -pi to pi and the code build a horizontal...
+... line. The code bellow removes this line. -----------
+if !isempty(jump_idx)
+    
+    for i = flip(jump_idx)
+        lamb_m = [lamb(1:i), NaN, lamb(i+1:end)];
+        ph_m = [ph_m(1:i), NaN, ph_m(i+1:end)];
+    end
+end
 
+# --------------------------------------------------------------
 
-#------  The plot should be continuous??? ----
+plot(lamb_m, ph_m, 'r', 'LineWidth', 2);
 
 
 #Geodesic using non-parametric equation:
