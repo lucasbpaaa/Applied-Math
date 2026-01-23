@@ -99,11 +99,9 @@ fprintf('Total Samples: %d\n', N);
 fprintf('Estimated Area: %.2f km²\n', area_brazil);
 
 
-#                                        Solver PIP:
 
 
-
-#                                   Solver PIP:
+#                                               Solver PIP:
 
 function inside = is_in_polygon(tx, ty, filename)
 
