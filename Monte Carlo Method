@@ -97,3 +97,47 @@ fprintf('\n--- Calculation Complete ---\n');
 fprintf('Points Inside Brazil: %d\n', count_inside);
 fprintf('Total Samples: %d\n', N);
 fprintf('Estimated Area: %.2f km²\n', area_brazil);
+
+
+#                                        Solver PIP:
+
+
+
+#                                   Solver PIP:
+
+function inside = is_in_polygon(tx, ty, filename)
+
+    data = load(filename);
+    px = data(:,1);
+    py = data(:,2);
+
+    # Close polygon with start and end points
+    px = [px; px(1)];
+    py = [py; py(1)];
+
+    x1 = px(1:end-1);
+    y1 = py(1:end-1);
+    x2 = px(2:end);
+    y2 = py(2:end);
+
+    # Ensure column vectors
+    tx = tx(:);
+    ty = ty(:);
+
+    # Initialize result vector
+    inside = false(size(tx));
+
+    # For each polygon edge (still vectorized over points)
+    for i = 1:length(x1)
+
+        # Check if ray crosses the edge
+        crosses = (y1(i) > ty) ~= (y2(i) > ty);
+
+        # X intersection of the ray with the edge
+        x_int = x1(i) + (ty - y1(i)) .* (x2(i) - x1(i)) ./ (y2(i) - y1(i));
+
+        # Toggle inside status where intersection is valid
+        mask = crosses & (tx < x_int);
+        inside(mask) = ~inside(mask);
+    end
+end
