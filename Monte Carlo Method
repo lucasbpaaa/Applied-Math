@@ -91,7 +91,7 @@ end
 
 pkg load statistics
 
-N = 10000;                     
+N = 100;                     
 R = 6371;                      
 filename = 'border_main.txt';
 
