@@ -1,0 +1,40 @@
+                                    #Crank Nicolson
+                                   
+#Parameters:                                   
+L = 500;          
+X_max = 300;     
+b = 5;            
+dx = 5;           
+dz = 1;           
+
+# Building the grid:
+z = 0:dz:L;
+x = 0:dx:X_max;
+Nz = length(z);
+Nx = length(x);
+
+
+V = exp(1i*z/4) .* exp(-(z - 250).^2 / 1500);
+
+u0 = exp(-(z - 250).^2 / 30000);
+
+#Solution matrix:
+U = zeros(Nz, Nx);
+U(:, 1) = u0;
+
+#Remember: [i/dx*I + (b/2dz^2)*D2 + (V/2)*I] u_new = [i/dx*I - (b/2dz^2)*D2 - (V/2)*I] u_old
+r = b / (2 * dz^2);
+k = 1i / dx;
+
+T_left = full(spdiags([1 -2 1],-1:1,Nz,Nz));
+T_right = full(spdiags([1 2 1],-1:1,Nz,Nz));
+
+N = r*T_left + (1/2)*V;
+
+M_left = (i/dx)*eye(dz) + N;
+M_right = (i/dx)*eye(dz) - N ;
+
+for n = 1:Nx-1
+  
+    U(2:end-1, n+1) = M_right \ (M_left * U(2:end-1, n));
+end
