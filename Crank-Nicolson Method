@@ -38,4 +38,22 @@ end
 
 # Plot:
 figure;
+hold on;
 imagesc(x, z, abs(U));
+
+
+#The 
+
+figure;
+S = sum(abs(U(:,1)).^2);
+plot(x, S);
+#hold on;
+
+E = ones(size(x));
+plot(x, squeeze(S(1))*E);
+
+figure;
+
+Error = S - squeeze(S(1))*E;
+plot(x, Error);
+
