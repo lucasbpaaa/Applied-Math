@@ -1,4 +1,4 @@
-#                                       Crank Nicolson
+#                                       AV2
 
 # Student: Lucas Barbosa
 
@@ -144,4 +144,77 @@ figure
 imagesc(x,z,UdB)
 axis xy
 caxis([-80 0])
+colorbar
+
+
+#                                 Acustic Field
+
+#Parameters:
+
+L = 40000;
+Z_max = 4000;
+dx = 10;
+dz = 5;
+f = 100;
+c0 = 1500;
+k0 = 2*pi*f/c0;
+
+z = 0:dz:Z_max;
+x = 0:dx:L;
+Nz = length(z);
+Nx = length(x);
+
+zc = 1300;
+epsl = 0.00737;
+
+#Equations:
+
+ztil = 2*(z - zc)/zc;
+c_z = 1500*(1 + epsl*(ztil - 1 + exp(-ztil)));
+
+V = (k0/2)*((c0./c_z).^2 - 1).';
+
+u0 = sqrt(k0)*(1.4467 - 0.42*(k0^2)*(z.'-zc).^2).*exp(-(k0^2)*(z.'-zc).^2/3.05);
+
+#PML
+
+sigma = zeros(Nz,1);
+zpml = 3500;
+sigmax = 5;
+for j=1:Nz
+    if z(j)>=zpml
+        sigma(j)=sigmax*(((z(j)-zpml)/(Z_max - zpml))^3);
+    end
+end
+
+
+#Matrix Solution:
+
+coef = (1 - 2i*sigma);
+
+U = zeros(Nz,Nx);
+U(:,1) = u0;
+
+b = 1/(2*k0);
+r = b/(dz^2);
+kk = 1i/dx;
+
+e = ones(Nz,1);
+D1 = spdiags([e -2*e e],-1:1,Nz,Nz);
+
+Aop = spdiags(coef,0,Nz,Nz)*D1;
+
+M_left  = kk*eye(Nz) + r*Aop + 0.5*diag(V);
+M_right = kk*eye(Nz) - r*Aop - 0.5*diag(V);
+
+[Lm,Um] = lu(M_left);
+
+for nstep = 1:Nx-1
+    U(:,nstep+1) = Um \ (Lm \ (M_right*U(:,nstep)));
+end
+
+figure
+imagesc(x,z,20*log10(abs(U)))
+axis xy
+caxis([-100 0])
 colorbar
