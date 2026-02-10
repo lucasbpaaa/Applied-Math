@@ -59,245 +59,89 @@ Error = S - squeeze(S(1))*E;
 plot(x, Error);
 
 
-#                                               PML
+                                    #Radar Signal
 
+#Parameters:
 
+L = 20000;
+Z_max = 200;
+dx = 5;
+dz = 1;
 
-# New parameters:                                     
-L_phys = 300;       # Physical domain limit
-PML_thick = 100;    # Absorption zone thickness
-L_total = L_phys + PML_thick;
-        
+f = 300e6;
+c = 3e8;
+k0 = 2*pi*f/c;
 
-sigma0 = 0.1;    
-
-# Building the new grid:
-
-Z = (0:dz:L_total)'; 
-X = x;
-NZ = length(Z);
-NX = length(X);
-dx = 5;           
-dZ = 1;  
-
-
-#PML Construction 
-# sigma(z) = sigma_0 * (z-L)^3 for z > L, else 0.
-
-sigma = zeros(NZ, 1);
-idx_pml = Z > L_phys;
-sigma(idx_pml) = sigma0 * (Z(idx_pml) - L_phys).^3;
-
-# Initial Condition and Potential:
-u0_PML = exp(1i*Z/4) .* exp(-(Z - 250).^2 / 1500);
-V_PML = exp(-(Z - 250).^2 / 30000);
-
-# Solution matrix:
-U_PML = zeros(NZ, NX);
-U_PML(:, 1) = u0_PML;
-
-# Coordinate Stretching
-
-S_inv = 1 ./ (1 + 1i * sigma);  
-
-# Building the tridiagonal matrix:
-
-
-e = ones(NZ,1);
-
-# Standard second derivative (kept for structure)
-D2_std = spdiags([e, -2*e, e], -1:1, NZ, NZ);
-
-
-# PML Laplacian: D2_pml = d/dz ( S_inv * d/dz )
-
-Sp = (S_inv(1:end-1) + S_inv(2:end)) / 2;
-
-main  = zeros(NZ,1);
-upper = zeros(NZ,1);
-lower = zeros(NZ,1);
-
-for j = 2:NZ-1
-    main(j)  = -(Sp(j) + Sp(j-1));
-    upper(j) =  Sp(j);
-    lower(j) =  Sp(j-1);
-end
-
-D2_pml = spdiags([lower main upper], -1:1, NZ, NZ) / dZ^2;
-
-
-# New assembly:
-
-r_PML = b / (2 * dZ^2);
-k_PML = k;
-
-M_left  = k_PML * eye(NZ) + r_PML * D2_pml + 0.5 * diag(V_PML);
-M_right = k_PML * eye(NZ) - r_PML * D2_pml - 0.5 * diag(V_PML);
-
-
-
-for l = 1:NX-1
-    U_PML(:, l+1) = M_left \ (M_right * U_PML(:, l));
-end
-
-
-# Plotting
-
-figure;
-imagesc(X, Z(Z <= L_phys), abs(U_PML(Z <= L_phys, :)));
-colorbar;
-title('Wave Propagation with Cubic PML');
-
-
-
-#                                    Taylor and Padé Approximation:
-
-
-#Taylor:
-
-x = linspace(0,2,100);
-
-y   = sqrt(1 + x);
-
-y_1 = 1 + x/2;
-y_2 = 1 + x/2 - x.^2/8;
-y_4 = 1 + x/2 - x.^2/8 + x.^3/16 - 5*x.^4/128;
-
-#Padé (order 1):
-y_p1 = (4+3*x)./(4+x);
-
-#Padé (order 2):
-y_p2 = (16+20*x+5*x.^2)./(16+12*x+x.^2);
-
-#Plot:
-
-plot(x, y,   'r', 'LineWidth', 1.5)
-hold on;
-plot(x, y_1, 'b');
-plot(x, y_2, 'r');
-plot(x, y_4, 'g');
-plot(x, y_p1, 'm');
-plot(x, y_p2, 'k');
-hold off;
-
-legend('sqrt(1+x)', '1st order', '2nd order', '4th order', 'Padé (1,1)', 'Padé (2,2)');
-grid on;
-
-
-
-#                                            Ratio-Physics
-
-
-# -------------------------------
-# 1️⃣ Physical parameters
-# -------------------------------
-c = 3e8;                 # speed of light
-f = 3e9;                 # frequency (Hz)
-k0 = 2*pi*f/c;           # wavenumber
-
-alpha = 1e-3;            # attenuation
-theta0 = 5*pi/180;       # beam tilt angle
-beta = 0.15;             # beam width
-A = 1.0;                 # source amplitude
-z0 = 10;                 # radar height
-
-# -------------------------------
-# 2️⃣ Computational domain
-# -------------------------------
-dx = 5; dz = 1;
-Xmax = 20000; Zmax = 350;
-
-x = 0:dx:Xmax;
-z = (0:dz:Zmax)';
-
-Nx = length(x);
+z = 0:dz:Z_max;
+x = 0:dx:L;
 Nz = length(z);
+Nx = length(x);
 
-# -------------------------------
-# 3️⃣ PML
-# -------------------------------
-z_pml = 150;
-sigma0 = 0.08;
+theta0 = 15*pi/180;
+z0 = 10;
+beta = 10*pi/180;
 
-sigma = sigma0 * max(z - z_pml, 0).^3;
-S_inv = 1 ./ (1 + 1i*sigma);
+A = 1;
+Q = A*(k0*beta)/((2*sqrt(pi)*log10(2))) .* ...
+    exp(-1i*k0*theta0*z.') .* ...
+    exp(-(beta^2/(8*log10(2)))*(k0^2)*(z.'-z0).^2);
 
-# -------------------------------
-# 4️⃣ Refractive index n(x,z)
-# -------------------------------
-n = zeros(Nz, Nx);
-
-# Vectorize vertical line
-n(z < 100,1) = 0.5;
-
-# Vectorize slanted line (x in [-1,0])
-x_idx = find(x >= -1 & x <= 0);
-for ix = x_idx
-    z_line = 100*(x(ix)+1);
-    [~, iz] = min(abs(z - z_line));
-    n(iz,ix) = 0.5;
+n = zeros(Nz,1);
+for j=1:Nz
+    if z(j)<=100
+        n(j)=1e-5*(-1+z(j)/100);
+    end
 end
 
-# -------------------------------
-# 5️⃣ Source Q(z)
-# -------------------------------
-Q = A * k0 * beta / (2*sqrt(pi)*log(2)) ...
-    .* exp(-1i*k0*theta0*z) ...
-    .* exp(-(beta^2 * k0^2 * (z - z0).^2)/(8*log(2)));
 
-# -------------------------------
-# 6️⃣ Transverse operator Dzz (PML + CN)
-# -------------------------------
-Sp = (S_inv(1:end-1) + S_inv(2:end))/2;
+#PML 
 
-main  = zeros(Nz,1);
-upper = zeros(Nz,1);
-lower = zeros(Nz,1);
+sigma = zeros(Nz,1);
+zpml = 150;
+sigmax = 5;
 
-main(2:Nz-1)  = -(Sp(1:end-1) + Sp(2:end));
-upper(2:Nz-1) = Sp(2:end);
-lower(2:Nz-1) = Sp(1:end-1);
+for j=1:Nz
+    if z(j)>=zpml
+        s = (z(j)-zpml)/(Z_max-zpml);
+        sigma(j)=sigmax*(s^3);
+    end
+end
 
-Dzz = spdiags([lower main upper], -1:1, Nz, Nz)/dz^2;
 
-# Ground boundary u(z=0)=0
-Dzz(1,:) = 0; Dzz(1,1) = 1;
 
-# -------------------------------
-# 7️⃣ Crank–Nicolson matrices
-# -------------------------------
-I = speye(Nz);
-U = zeros(Nz, Nx);
+b = 1/(2*k0);
+V = (k0/2)*n;
+
+U = zeros(Nz,Nx);
 U(:,1) = Q;
 
-r = 1/(4*k0);
-kx = 1i/dx;
+kk = 1i/dx;
 
-for ix = 1:Nx-1
+e = ones(Nz,1);
+Dzz = spdiags([e -2*e e],-1:1,Nz,Nz)/(dz^2);
 
-    V = k0^2*(1 + 1i*alpha + n(:,ix));
-    L = Dzz + spdiags(V,0,Nz,Nz);
+#Claerbout + PML 
 
-    M_left  = kx*I - 0.5i*k0*I - r*L;
-    M_right = kx*I + 0.5i*k0*I + r*L;
+coef = (1 - 2i*sigma);
+Aop = b * spdiags(coef,0,Nz,Nz) * Dzz;
 
-    U(:,ix+1) = M_left \ (M_right * U(:,ix));
+
+#Matrix Solution:
+
+M_left  = kk*eye(Nz) + Aop + 0.5*diag(V);
+M_right = kk*eye(Nz) - Aop - 0.5*diag(V);
+
+[Lm,Um] = lu(M_left);
+
+for nstep = 1:Nx-1
+    U(:,nstep+1) = Um \ (Lm \ (M_right*U(:,nstep)));
 end
 
-# -------------------------------
-# 8️⃣ Plot
-# -------------------------------
-figure;
-imagesc(x/1000, z, abs(U));
-set(gca,'YDir','normal');
-xlabel('Range (km)');
-ylabel('Height (m)');
-title('|u(x,z)|  —  Klein–Gordon (Padé + PML)');
-colorbar;
+#plot
 
-
-
-
-
-
-
+UdB = 20*log10(abs(U));
+figure
+imagesc(x,z,UdB)
+axis xy
+caxis([-80 0])
+colorbar
