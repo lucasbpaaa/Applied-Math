@@ -218,3 +218,121 @@ imagesc(x,z,20*log10(abs(U)))
 axis xy
 caxis([-100 0])
 colorbar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#                              TEST
+
+
+
+
+
+%% Parâmetros Físicos e Geometria
+f = 300e6;              % Frequência (300 MHz)
+c = 3e8;                
+k = 2*pi*f/c;           % Número de onda
+lambda = c/f;
+
+L = 20000;              % 20 km
+H = 200;                % 200 m
+
+% Dicas de discretização do gabarito:
+dz = lambda / 10;       % ~0.1m (10 pontos por lambda)
+dx = 5 * dz;            % Passo em x maior que em z
+
+z = (0:dz:H)';          
+x = 0:dx:L;
+Nz = length(z);
+Nx = length(x);
+
+%% Índice de Refração n(z)
+n_vec = zeros(Nz, 1);
+idx_n = z <= 100;
+n_vec(idx_n) = 1e-5 * (-1 + z(idx_n)/100);
+
+%% Fonte (Antena Parabólica Q)
+theta0 = 10 * pi/180;   % Ângulo de elevação
+beta = 35 * pi/180;     % Largura do feixe
+z0 = 10;                % Altitude da fonte
+
+% Constante de normalização e decaimento
+C_norm = (k * beta) / (2 * sqrt(pi) * log10(2)); % Conforme fórmula
+exp_term1 = exp(-1i * k * theta0 * z);
+exp_term2 = exp(-(beta^2 / (8 * log10(2))) * k^2 * (z - z0).^2);
+Q = C_norm * exp_term1 .* exp_term2;
+
+%% Camada Absorvente (PML)
+% Aplicada nos últimos 10m do domínio
+sigma0 = 5; 
+z_pml = 190;
+sigma = zeros(Nz, 1);
+sigma(z >= z_pml) = sigma0 * ((z(z >= z_pml) - z_pml) / (H - z_pml)).^2;
+
+%% Operadores de Claerbout (Grande Abertura)
+% A aproximação de Claerbout requer a discretização de (1 + q Dzz)
+% Onde q_coeffs dependem da expansão de Padé (1,1)
+I = speye(Nz);
+e = ones(Nz, 1);
+Dzz = spdiags([e -2*e e], [-1 0 1], Nz, Nz) / (dz^2);
+
+% Termo de refração e PML combinados
+N = spdiags(n_vec - 1i*sigma/k, 0, Nz, Nz);
+
+% Matrizes do Sistema Claerbout: (I + a*Dzz) u_next = (I + b*Dzz) u_curr
+% Para grande abertura, os coeficientes padrão são:
+a = (1/(4*k^2)) + 1i*dx/(4*k);
+b = (1/(4*k^2)) - 1i*dx/(4*k);
+
+M1 = I + a*Dzz + (1i*dx/2)*k*N;
+M0 = I + b*Dzz - (1i*dx/2)*k*N;
+
+% Condição de Dirichlet no Mar (z=0): u = 0
+M1(1,:) = 0; M1(1,1) = 1;
+M0(1,:) = 0; M0(1,1) = 0; 
+
+%% Marcha no Espaço (Otimizada)
+% Pré-calculo da matriz de transição W = M1 \ M0
+W = M1 \ M0;
+
+U = zeros(Nz, Nx);
+U(:,1) = Q;
+U(1,1) = 0; % Garante Dirichlet na origem
+
+for ix = 1:Nx-1
+    U(:, ix+1) = W * U(:, ix);
+end
+
+%% Visualização conforme Gabarito
+UdB = 20*log10(abs(U) + eps); % eps evita log(0)
+max_val = max(UdB(:));
+UdB_norm = UdB - max_val; % Normalização para o topo ser 0dB
+
+figure('Color', 'w');
+imagesc(x/1000, z, UdB_norm);
+axis xy;
+colormap(jet);
+colorbar;
+caxis([-50 0]); % Escala do gabarito
+xlabel('Distance (km)');
+ylabel('Height (m)');
+title(['Propagação de Radar - Claerbout (\theta_0 = 10°)']);
+grid on;
