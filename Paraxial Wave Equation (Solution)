@@ -1,4 +1,4 @@
-#                                       AV2
+#                         Paraxial Wave
 
 # Student: Lucas Barbosa
 
@@ -59,32 +59,38 @@ Error = S - squeeze(S(1))*E;
 plot(x, Error);
 
 
-                                    #Radar Signal
+
+                                  #Radar Signal
 
 #Parameters:
 
 L = 20000;
-Z_max = 200;
+Z_dom = 200;
 dx = 5;
 dz = 1;
-
+pml_thickness = 50;
+Z_max = Z_dom + pml_thickness   
 f = 300e6;
 c = 3e8;
 k0 = 2*pi*f/c;
 
-z = 0:dz:Z_max;
+z = (0:dz:Z_max).';
 x = 0:dx:L;
 Nz = length(z);
 Nx = length(x);
 
-theta0 = 15*pi/180;
+theta0 = 20*pi/180;
 z0 = 10;
-beta = 10*pi/180;
+beta = 35*pi/180;  
 
 A = 1;
-Q = A*(k0*beta)/((2*sqrt(pi)*log10(2))) .* ...
-    exp(-1i*k0*theta0*z.') .* ...
-    exp(-(beta^2/(8*log10(2)))*(k0^2)*(z.'-z0).^2);
+
+# Source Q(z)
+Q = A*(k0*beta)/(2*sqrt(pi)*log10(2)) .* ...
+    exp(-1i*k0*theta0*z) .* ...
+    exp(-(beta^2/(8*log10(2)))*(k0^2)*(z-z0).^2);
+
+# Perfil n(z)
 
 n = zeros(Nz,1);
 for j=1:Nz
@@ -94,20 +100,23 @@ for j=1:Nz
 end
 
 
-#PML 
+# PML
+   
+zpml = Z_max - pml_thickness;
 
 sigma = zeros(Nz,1);
-zpml = 150;
-sigmax = 5;
+sigmax = 20;          
 
 for j=1:Nz
-    if z(j)>=zpml
-        s = (z(j)-zpml)/(Z_max-zpml);
-        sigma(j)=sigmax*(s^3);
+    if z(j) >= zpml
+        s = (z(j)-zpml)/pml_thickness;
+        sigma(j) = sigmax*s^3;
     end
 end
 
 
+
+# Claerbout's Operator
 
 b = 1/(2*k0);
 V = (k0/2)*n;
@@ -120,219 +129,139 @@ kk = 1i/dx;
 e = ones(Nz,1);
 Dzz = spdiags([e -2*e e],-1:1,Nz,Nz)/(dz^2);
 
-#Claerbout + PML 
+# Dirichlet (z=0)
 
-coef = (1 - 2i*sigma);
-Aop = b * spdiags(coef,0,Nz,Nz) * Dzz;
+Dzz(1,:) = 0;
+Dzz(1,1) = 1;
 
 
-#Matrix Solution:
+# PML 
 
-M_left  = kk*eye(Nz) + Aop + 0.5*diag(V);
-M_right = kk*eye(Nz) - Aop - 0.5*diag(V);
+sz = 1 + 1i*sigma/k0;
+S  = spdiags(1./(sz.^2),0,Nz,Nz);
+Aop = b * S * Dzz;
+
+
+
+#Crank-Nicolson
+
+M_left  = kk*speye(Nz) + Aop + 0.5*spdiags(V,0,Nz,Nz);
+M_right = kk*speye(Nz) - Aop - 0.5*spdiags(V,0,Nz,Nz);
 
 [Lm,Um] = lu(M_left);
 
 for nstep = 1:Nx-1
-    U(:,nstep+1) = Um \ (Lm \ (M_right*U(:,nstep)));
+    U(:,nstep+1) = Um \ (Lm \ M_right*U(:,nstep));
 end
 
-#plot
 
-UdB = 20*log10(abs(U));
+# Plot
+
+UdB = 20*log10(abs(U)+eps);
+
 figure
 imagesc(x,z,UdB)
 axis xy
-caxis([-80 0])
 colorbar
+caxis([-50 -5])
+title('Campo em dB com PML')
+xlabel('x (m)')
+ylabel('z (m)')
 
 
-#                                 Acustic Field
 
-#Parameters:
+#                    Acoustic Field - SOFAR
+
+
+# Parameters
 
 L = 40000;
 Z_max = 4000;
+
 dx = 10;
 dz = 5;
+
 f = 100;
 c0 = 1500;
 k0 = 2*pi*f/c0;
 
-z = 0:dz:Z_max;
+z = (0:dz:Z_max).';
 x = 0:dx:L;
+
 Nz = length(z);
 Nx = length(x);
 
 zc = 1300;
 epsl = 0.00737;
 
-#Equations:
+
+# Munk profile
 
 ztil = 2*(z - zc)/zc;
 c_z = 1500*(1 + epsl*(ztil - 1 + exp(-ztil)));
 
-V = (k0/2)*((c0./c_z).^2 - 1).';
-
-u0 = sqrt(k0)*(1.4467 - 0.42*(k0^2)*(z.'-zc).^2).*exp(-(k0^2)*(z.'-zc).^2/3.05);
-
-#PML
-
-sigma = zeros(Nz,1);
-zpml = 3500;
-sigmax = 5;
-for j=1:Nz
-    if z(j)>=zpml
-        sigma(j)=sigmax*(((z(j)-zpml)/(Z_max - zpml))^3);
-    end
-end
 
 
-#Matrix Solution:
+# Operator X (Claerbout)
 
-coef = (1 - 2i*sigma);
+e = ones(Nz,1);
+Dzz = spdiags([e -2*e e],-1:1,Nz,Nz)/(dz^2);
+
+Qz = (c0./c_z).^2 - 1;
+
+Xop = (1/k0^2)*Dzz + spdiags(Qz,0,Nz,Nz);
+
+
+# Padé (1,1) operators
+
+I = speye(Nz);
+
+A = I - (1/4)*Xop;
+B = I + (1/4)*Xop;
+
+#Crank-Nicolson 
+
+M_left  = A - (1i*k0*dx/4)*Xop;
+M_right = A + (1i*k0*dx/4)*Xop;
+
+#Dirichlet 
+M_left(1,:) = 0; M_left(1,1) = 1;
+M_left(end,:) = 0; M_left(end,end) = 1;
+
+M_right(1,:) = 0;
+M_right(end,:) = 0;
+
+[Lm,Um] = lu(M_left);
+
+
+# Initial condition 
+
+
+u0 = sqrt(k0)*(1.4467 - 0.42*(k0^2)*(z-zc).^2) ...
+     .* exp(-(k0^2)*(z-zc).^2/3.05);
 
 U = zeros(Nz,Nx);
 U(:,1) = u0;
+U(1,1)=0;
+U(end,1)=0;
 
-b = 1/(2*k0);
-r = b/(dz^2);
-kk = 1i/dx;
-
-e = ones(Nz,1);
-D1 = spdiags([e -2*e e],-1:1,Nz,Nz);
-
-Aop = spdiags(coef,0,Nz,Nz)*D1;
-
-M_left  = kk*eye(Nz) + r*Aop + 0.5*diag(V);
-M_right = kk*eye(Nz) - r*Aop - 0.5*diag(V);
-
-[Lm,Um] = lu(M_left);
+#Loop 
 
 for nstep = 1:Nx-1
     U(:,nstep+1) = Um \ (Lm \ (M_right*U(:,nstep)));
 end
 
+
+# Plot
+
+UdB = 20*log10(abs(U)+1e-16);
+
 figure
-imagesc(x,z,20*log10(abs(U)))
+imagesc(x,z,UdB)
 axis xy
-caxis([-100 0])
 colorbar
+caxis([-80 -10])
+xlabel('x (m)')
+ylabel('z (m)')
+title('SOFAR - Claerbout Padé (1,1)')
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#                              TEST
-
-
-
-
-
-%% Parâmetros Físicos e Geometria
-f = 300e6;              % Frequência (300 MHz)
-c = 3e8;                
-k = 2*pi*f/c;           % Número de onda
-lambda = c/f;
-
-L = 20000;              % 20 km
-H = 200;                % 200 m
-
-% Dicas de discretização do gabarito:
-dz = lambda / 10;       % ~0.1m (10 pontos por lambda)
-dx = 5 * dz;            % Passo em x maior que em z
-
-z = (0:dz:H)';          
-x = 0:dx:L;
-Nz = length(z);
-Nx = length(x);
-
-%% Índice de Refração n(z)
-n_vec = zeros(Nz, 1);
-idx_n = z <= 100;
-n_vec(idx_n) = 1e-5 * (-1 + z(idx_n)/100);
-
-%% Fonte (Antena Parabólica Q)
-theta0 = 10 * pi/180;   % Ângulo de elevação
-beta = 35 * pi/180;     % Largura do feixe
-z0 = 10;                % Altitude da fonte
-
-% Constante de normalização e decaimento
-C_norm = (k * beta) / (2 * sqrt(pi) * log10(2)); % Conforme fórmula
-exp_term1 = exp(-1i * k * theta0 * z);
-exp_term2 = exp(-(beta^2 / (8 * log10(2))) * k^2 * (z - z0).^2);
-Q = C_norm * exp_term1 .* exp_term2;
-
-%% Camada Absorvente (PML)
-% Aplicada nos últimos 10m do domínio
-sigma0 = 5; 
-z_pml = 190;
-sigma = zeros(Nz, 1);
-sigma(z >= z_pml) = sigma0 * ((z(z >= z_pml) - z_pml) / (H - z_pml)).^2;
-
-%% Operadores de Claerbout (Grande Abertura)
-% A aproximação de Claerbout requer a discretização de (1 + q Dzz)
-% Onde q_coeffs dependem da expansão de Padé (1,1)
-I = speye(Nz);
-e = ones(Nz, 1);
-Dzz = spdiags([e -2*e e], [-1 0 1], Nz, Nz) / (dz^2);
-
-% Termo de refração e PML combinados
-N = spdiags(n_vec - 1i*sigma/k, 0, Nz, Nz);
-
-% Matrizes do Sistema Claerbout: (I + a*Dzz) u_next = (I + b*Dzz) u_curr
-% Para grande abertura, os coeficientes padrão são:
-a = (1/(4*k^2)) + 1i*dx/(4*k);
-b = (1/(4*k^2)) - 1i*dx/(4*k);
-
-M1 = I + a*Dzz + (1i*dx/2)*k*N;
-M0 = I + b*Dzz - (1i*dx/2)*k*N;
-
-% Condição de Dirichlet no Mar (z=0): u = 0
-M1(1,:) = 0; M1(1,1) = 1;
-M0(1,:) = 0; M0(1,1) = 0; 
-
-%% Marcha no Espaço (Otimizada)
-% Pré-calculo da matriz de transição W = M1 \ M0
-W = M1 \ M0;
-
-U = zeros(Nz, Nx);
-U(:,1) = Q;
-U(1,1) = 0; % Garante Dirichlet na origem
-
-for ix = 1:Nx-1
-    U(:, ix+1) = W * U(:, ix);
-end
-
-%% Visualização conforme Gabarito
-UdB = 20*log10(abs(U) + eps); % eps evita log(0)
-max_val = max(UdB(:));
-UdB_norm = UdB - max_val; % Normalização para o topo ser 0dB
-
-figure('Color', 'w');
-imagesc(x/1000, z, UdB_norm);
-axis xy;
-colormap(jet);
-colorbar;
-caxis([-50 0]); % Escala do gabarito
-xlabel('Distance (km)');
-ylabel('Height (m)');
-title(['Propagação de Radar - Claerbout (\theta_0 = 10°)']);
-grid on;
