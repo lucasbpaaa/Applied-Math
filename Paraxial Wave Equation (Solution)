@@ -60,6 +60,7 @@ plot(x, Error);
 
 
 
+ 
                                   #Radar Signal
 
 #Parameters:
@@ -79,7 +80,7 @@ x = 0:dx:L;
 Nz = length(z);
 Nx = length(x);
 
-theta0 = 20*pi/180;
+theta0 = 10*pi/180;
 z0 = 10;
 beta = 35*pi/180;  
 
@@ -92,7 +93,7 @@ Q = A*(k0*beta)/(2*sqrt(pi)*log10(2)) .* ...
 
 # Perfil n(z)
 
-n = zeros(Nz,1);
+n = zeros(Nz,1); #Meu n é o indice de refração, ou seja, 1+n(z).
 for j=1:Nz
     if z(j)<=100
         n(j)=1e-5*(-1+z(j)/100);
@@ -105,7 +106,7 @@ end
 zpml = Z_max - pml_thickness;
 
 sigma = zeros(Nz,1);
-sigmax = 20;          
+sigmax = 5;          
 
 for j=1:Nz
     if z(j) >= zpml
@@ -167,6 +168,7 @@ caxis([-50 -5])
 title('Campo em dB com PML')
 xlabel('x (m)')
 ylabel('z (m)')
+
 
 
 
