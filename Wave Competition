@@ -1,0 +1,80 @@
+#                                     Diffraction Network
+
+#Parameters
+f = 300e6; c = 3e8; 
+k0 = 2*pi*f/c;
+L = 2000;          
+Z_dom = 200;      
+dx = 2.0; 
+dz = 0.2; 
+z = (0:dz:Z_dom)'; x = 0:dx:L;
+Nz = length(z); Nx = length(x);
+
+#Network 
+
+num_fendas = 10;
+espacamento = 7;   
+z0 = Z_dom/2;       
+sigma = 3;        # Width of each slit
+
+Q = zeros(Nz, 1);
+for n = 1:num_fendas
+    zn = z0 + (n - (num_fendas+1)/2) * espacamento;
+    Q = Q + exp(-(z - zn).^2 / (2 * sigma^2));
+end
+
+#Crank-Nicolson
+
+I = speye(Nz);
+e = ones(Nz, 1);
+Dzz = spdiags([e -2*e e], -1:1, Nz, Nz) / (dz^2);
+
+#Claerbout
+a = (1/(4*k0^2)) + 1i*dx/(4*k0);
+b = (1/(4*k0^2)) - 1i*dx/(4*k0);
+
+M1 = I + a*Dzz;
+M0 = I + b*Dzz;
+
+#Dirichlet
+M1(1,:) = 0; M1(1,1) = 1; M0(1,:) = 0; M0(1,1) = 0;
+M1(end,:) = 0; M1(end,end) = 1; M0(end,:) = 0; M0(end,end) = 0;
+
+#Solution
+
+W = M1 \ M0;
+
+U = zeros(Nz, Nx);
+U(:,1) = Q;
+for ix = 1:Nx-1
+    U(:,ix+1) = W * U(:,ix);
+end
+
+#Plot
+
+U_db = 20*log10(abs(U) + eps);
+U_db = U_db - max(U_db(:)); 
+
+figure('Color', 'k');
+imagesc(x, z, U_db);
+hold on;
+colormap(hot); 
+caxis([-40 0]);
+axis xy;
+shading interp;
+
+xlabel('Distância x (m)', 'Color', 'w');
+ylabel('Altura z (m)', 'Color', 'w');
+title('Interferência de Rede de Difração - Crank-Nicolson', 'Color', 'w');
+set(gca, 'Color', 'k', 'XColor', 'w', 'YColor', 'w');
+
+
+anteparo = abs(U(:, end)).^2; 
+anteparo = anteparo / max(anteparo);
+
+figure('Color', 'w');
+plot(anteparo, z, 'LineWidth', 2, 'Color', [0.8 0.2 0]);
+grid on;
+title('Intensidade no Anteparo (x = 2000m)');
+xlabel('Intensidade Relativa');
+ylabel('Altura z (m)');
