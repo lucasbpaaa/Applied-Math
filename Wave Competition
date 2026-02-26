@@ -1,21 +1,24 @@
 #                                     Diffraction Network
 
 #Parameters
-f = 300e6; c = 3e8; 
+f = 300e6; 
+c = 3e8; 
 k0 = 2*pi*f/c;
 L = 2000;          
-Z_dom = 200;      
+Z_dom = 500;      
 dx = 2.0; 
 dz = 0.2; 
-z = (0:dz:Z_dom)'; x = 0:dx:L;
-Nz = length(z); Nx = length(x);
+z = (0:dz:Z_dom)'; 
+x = 0:dx:L;
+Nz = length(z); 
+Nx = length(x);
 
 #Network 
 
-num_fendas = 10;
-espacamento = 7;   
+num_fendas = 15;
+espacamento = 9;   
 z0 = Z_dom/2;       
-sigma = 3;        # Width of each slit
+sigma = 2;        # Width of each slit
 
 Q = zeros(Nz, 1);
 for n = 1:num_fendas
@@ -50,6 +53,7 @@ for ix = 1:Nx-1
     U(:,ix+1) = W * U(:,ix);
 end
 
+
 #Plot
 
 U_db = 20*log10(abs(U) + eps);
@@ -58,14 +62,14 @@ U_db = U_db - max(U_db(:));
 figure('Color', 'k');
 imagesc(x, z, U_db);
 hold on;
-colormap(hot); 
+colormap(jet); 
 caxis([-40 0]);
 axis xy;
 shading interp;
 
-xlabel('Distância x (m)', 'Color', 'w');
-ylabel('Altura z (m)', 'Color', 'w');
-title('Interferência de Rede de Difração - Crank-Nicolson', 'Color', 'w');
+xlabel('Distance x(m)', 'Color', 'w');
+ylabel('Height z(m)', 'Color', 'w');
+title('Diffraction Network', 'Color', 'w');
 set(gca, 'Color', 'k', 'XColor', 'w', 'YColor', 'w');
 
 
@@ -75,6 +79,6 @@ anteparo = anteparo / max(anteparo);
 figure('Color', 'w');
 plot(anteparo, z, 'LineWidth', 2, 'Color', [0.8 0.2 0]);
 grid on;
-title('Intensidade no Anteparo (x = 2000m)');
-xlabel('Intensidade Relativa');
-ylabel('Altura z (m)');
+title('Screen');
+xlabel('Intensity');
+ylabel('Height z(m)');
